@@ -1,5 +1,5 @@
 import { applyPatch, compare, Operation } from "fast-json-patch";
-import { z, ZodSchema } from "zod";
+import { z, ZodType } from "zod";
 
 /**
  * Schema for validating a JSON Patch Operation according to RFC 6902.
@@ -48,7 +48,7 @@ type ZOperation = z.infer<typeof ZOperation>;
  * Parameters for constructing a JsonPatch instance.
  */
 interface JsonPatchParam<T> {
-  schema: ZodSchema<T>;
+  schema: ZodType<T>;
 }
 
 /**
@@ -74,7 +74,7 @@ interface ApplyParam<T> {
  * @template T - The type of objects this patch handler works with.
  */
 export class JsonPatch<T> {
-  private readonly schema: ZodSchema<T>;
+  private readonly schema: ZodType<T>;
 
   /**
    * Creates a new JsonPatch instance.
