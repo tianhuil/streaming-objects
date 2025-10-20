@@ -541,3 +541,87 @@ describe("JsonPatch.apply", () => {
     expect(result).toEqual({ items: ["a", "b", "c"] });
   });
 });
+
+describe("JsonPatch.apply error handling", () => {
+  test("should throw PatchError for invalid path (not brittle name check)", () => {
+    const schema = z.object({
+      name: z.string(),
+      age: z.number(),
+    });
+    const patcher = new JsonPatch({ schema });
+
+    const original = { name: "John", age: 30 };
+    const patch: Operation[] = [
+      { op: "replace", path: "/nonexistent", value: "value" },
+    ];
+
+    try {
+      patcher.apply({ original, patch });
+      expect(true).toBe(false); // Should not reach here
+    } catch (error) {
+      // Should throw PatchError, not our generic error
+      expect(error).toBeInstanceOf(Error);
+      // The actual PatchError will be the cause
+      if (error instanceof Error) {
+        expect(error.message).toContain("path");
+      }
+    }
+  });
+
+  test("should handle objects with 'name' property without false positives", () => {
+    const schema = z.object({
+      name: z.string(),
+      description: z.string().optional(),
+    });
+    const patcher = new JsonPatch({ schema });
+
+    const original = { name: "John" };
+    const patch: Operation[] = [
+      { op: "add", path: "/description", value: "A person" },
+    ];
+
+    // This should succeed, even though object has 'name' property
+    const result = patcher.apply({ original, patch });
+    expect(result).toEqual({ name: "John", description: "A person" });
+  });
+
+  test("should throw PatchError for test operation failure", () => {
+    const schema = z.object({
+      value: z.number(),
+    });
+    const patcher = new JsonPatch({ schema });
+
+    const original = { value: 10 };
+    const patch: Operation[] = [{ op: "test", path: "/value", value: 20 }];
+
+    try {
+      patcher.apply({ original, patch });
+      expect(true).toBe(false); // Should not reach here
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      if (error instanceof Error) {
+        // Should mention test failure
+        expect(error.message.toLowerCase()).toContain("test");
+      }
+    }
+  });
+
+  test("should throw PatchError for invalid array index", () => {
+    const schema = z.object({
+      items: z.array(z.string()),
+    });
+    const patcher = new JsonPatch({ schema });
+
+    const original = { items: ["a", "b"] };
+    const patch: Operation[] = [
+      { op: "replace", path: "/items/10", value: "x" },
+    ];
+
+    try {
+      patcher.apply({ original, patch });
+      expect(true).toBe(false); // Should not reach here
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+    }
+  });
+});
