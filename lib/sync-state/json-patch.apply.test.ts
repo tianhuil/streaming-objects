@@ -1,7 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
+import { z, ZodSchema } from "zod";
 import { Operation } from "fast-json-patch";
 import { JsonPatch } from "./json-patch";
+
+interface TestApplyParam<T> {
+  schema: ZodSchema<T>;
+  original: T;
+  patch: Operation[];
+}
+
+/**
+ * Helper function to apply a patch to an object.
+ * Returns the result that can be asserted against.
+ */
+function testApply<T>({ schema, original, patch }: TestApplyParam<T>): T {
+  const patcher = new JsonPatch({ schema });
+  return patcher.apply({ original, patch });
+}
 
 describe("JsonPatch.apply", () => {
   // Basic functionality tests
@@ -186,285 +201,207 @@ describe("JsonPatch.apply", () => {
   });
 
   // RFC 6902 Appendix A Test Cases
-  // A.1. Adding an Object Member
-  test("RFC 6902 A.1: Adding an Object Member", () => {
-    const schema = z.object({
-      foo: z.string().optional(),
-      baz: z.string().optional(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { foo: "bar" };
-    const patch: Operation[] = [{ op: "add", path: "/baz", value: "qux" }];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({ foo: "bar", baz: "qux" });
-  });
-
-  // A.2. Adding an Array Element
-  test("RFC 6902 A.2: Adding an Array Element", () => {
-    const schema = z.object({
-      foo: z.array(z.string()),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { foo: ["bar", "baz"] };
-    const patch: Operation[] = [{ op: "add", path: "/foo/1", value: "qux" }];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({ foo: ["bar", "qux", "baz"] });
-  });
-
-  // A.3. Removing an Object Member
-  test("RFC 6902 A.3: Removing an Object Member", () => {
-    const schema = z.object({
-      baz: z.string().optional(),
-      foo: z.string().optional(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { baz: "qux", foo: "bar" };
-    const patch: Operation[] = [{ op: "remove", path: "/baz" }];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({ foo: "bar" });
-  });
-
-  // A.4. Removing an Array Element
-  test("RFC 6902 A.4: Removing an Array Element", () => {
-    const schema = z.object({
-      foo: z.array(z.string()),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { foo: ["bar", "qux", "baz"] };
-    const patch: Operation[] = [{ op: "remove", path: "/foo/1" }];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({ foo: ["bar", "baz"] });
-  });
-
-  // A.5. Replacing a Value
-  test("RFC 6902 A.5: Replacing a Value", () => {
-    const schema = z.object({
-      baz: z.string(),
-      foo: z.string(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { baz: "qux", foo: "bar" };
-    const patch: Operation[] = [{ op: "replace", path: "/baz", value: "boo" }];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({ baz: "boo", foo: "bar" });
-  });
-
-  // A.6. Moving a Value
-  test("RFC 6902 A.6: Moving a Value", () => {
-    const schema = z.object({
-      foo: z
-        .object({
-          bar: z.string(),
-          waldo: z.string().optional(),
-          qux: z.string().optional(),
-        })
-        .passthrough(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = {
-      foo: {
-        bar: "baz",
-        waldo: "fred",
+  // https://datatracker.ietf.org/doc/html/rfc6902#appendix-A
+  const rfcTestCases: Array<{
+    name: string;
+    schema: ZodSchema<unknown>;
+    original: unknown;
+    patch: Operation[];
+    expected: unknown;
+  }> = [
+    {
+      name: "A.1: Adding an Object Member",
+      schema: z.object({
+        foo: z.string().optional(),
+        baz: z.string().optional(),
+      }),
+      original: { foo: "bar" },
+      patch: [{ op: "add", path: "/baz", value: "qux" }],
+      expected: { foo: "bar", baz: "qux" },
+    },
+    {
+      name: "A.2: Adding an Array Element",
+      schema: z.object({
+        foo: z.array(z.string()),
+      }),
+      original: { foo: ["bar", "baz"] },
+      patch: [{ op: "add", path: "/foo/1", value: "qux" }],
+      expected: { foo: ["bar", "qux", "baz"] },
+    },
+    {
+      name: "A.3: Removing an Object Member",
+      schema: z.object({
+        baz: z.string().optional(),
+        foo: z.string().optional(),
+      }),
+      original: { baz: "qux", foo: "bar" },
+      patch: [{ op: "remove", path: "/baz" }],
+      expected: { foo: "bar" },
+    },
+    {
+      name: "A.4: Removing an Array Element",
+      schema: z.object({
+        foo: z.array(z.string()),
+      }),
+      original: { foo: ["bar", "qux", "baz"] },
+      patch: [{ op: "remove", path: "/foo/1" }],
+      expected: { foo: ["bar", "baz"] },
+    },
+    {
+      name: "A.5: Replacing a Value",
+      schema: z.object({
+        baz: z.string(),
+        foo: z.string(),
+      }),
+      original: { baz: "qux", foo: "bar" },
+      patch: [{ op: "replace", path: "/baz", value: "boo" }],
+      expected: { baz: "boo", foo: "bar" },
+    },
+    {
+      name: "A.6: Moving a Value",
+      schema: z.object({
+        foo: z
+          .object({
+            bar: z.string(),
+            waldo: z.string().optional(),
+            qux: z.string().optional(),
+          })
+          .passthrough(),
+      }),
+      original: {
+        foo: {
+          bar: "baz",
+          waldo: "fred",
+        },
       },
-    };
-    const patch: Operation[] = [
-      { op: "move", from: "/foo/waldo", path: "/foo/qux" },
-    ];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({
-      foo: {
-        bar: "baz",
-        qux: "fred",
+      patch: [{ op: "move", from: "/foo/waldo", path: "/foo/qux" }],
+      expected: {
+        foo: {
+          bar: "baz",
+          qux: "fred",
+        },
       },
+    },
+    {
+      name: "A.7: Moving an Array Element",
+      schema: z.object({
+        foo: z.array(z.string()),
+      }),
+      original: { foo: ["all", "grass", "cows", "eat"] },
+      patch: [{ op: "move", from: "/foo/1", path: "/foo/3" }],
+      expected: { foo: ["all", "cows", "eat", "grass"] },
+    },
+    {
+      name: "A.8: Testing a Value - Success",
+      schema: z.object({
+        baz: z.string(),
+        foo: z.array(z.union([z.string(), z.number()])),
+      }),
+      original: {
+        baz: "qux",
+        foo: ["a", 2, "c"],
+      },
+      patch: [
+        { op: "test", path: "/baz", value: "qux" },
+        { op: "test", path: "/foo/1", value: 2 },
+      ],
+      expected: {
+        baz: "qux",
+        foo: ["a", 2, "c"],
+      },
+    },
+    {
+      name: "A.10: Adding a Nested Member Object",
+      schema: z.object({
+        foo: z.string(),
+        child: z
+          .object({
+            grandchild: z.object({}).passthrough(),
+          })
+          .optional(),
+      }),
+      original: { foo: "bar" },
+      patch: [{ op: "add", path: "/child", value: { grandchild: {} } }],
+      expected: {
+        foo: "bar",
+        child: {
+          grandchild: {},
+        },
+      },
+    },
+    {
+      name: "A.11: Ignoring Unrecognized Elements",
+      schema: z.object({
+        foo: z.string(),
+        baz: z.string().optional(),
+      }),
+      original: { foo: "bar" },
+      patch: [{ op: "add", path: "/baz", value: "qux", xyz: 123 } as Operation],
+      expected: { foo: "bar", baz: "qux" },
+    },
+    {
+      name: "A.14: ~ Escape Ordering",
+      schema: z.object({}).passthrough(),
+      original: {
+        "/": 9,
+        "~1": 10,
+      },
+      patch: [{ op: "test", path: "/~01", value: 10 }],
+      expected: {
+        "/": 9,
+        "~1": 10,
+      },
+    },
+    {
+      name: "A.16: Adding an Array Value",
+      schema: z.object({
+        foo: z.array(z.union([z.string(), z.array(z.string())])),
+      }),
+      original: { foo: ["bar"] },
+      patch: [{ op: "add", path: "/foo/-", value: ["abc", "def"] }],
+      expected: { foo: ["bar", ["abc", "def"]] },
+    },
+  ];
+
+  rfcTestCases.forEach(({ name, schema, original, patch, expected }) => {
+    test(`RFC 6902 ${name}`, () => {
+      const result = testApply({ schema, original, patch });
+      expect(result).toEqual(expected);
     });
   });
 
-  // A.7. Moving an Array Element
-  test("RFC 6902 A.7: Moving an Array Element", () => {
-    const schema = z.object({
-      foo: z.array(z.string()),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { foo: ["all", "grass", "cows", "eat"] };
-    const patch: Operation[] = [{ op: "move", from: "/foo/1", path: "/foo/3" }];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({ foo: ["all", "cows", "eat", "grass"] });
-  });
-
-  // A.8. Testing a Value: Success
-  test("RFC 6902 A.8: Testing a Value - Success", () => {
-    const schema = z.object({
-      baz: z.string(),
-      foo: z.array(z.union([z.string(), z.number()])),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = {
-      baz: "qux",
-      foo: ["a", 2, "c"],
-    };
-    const patch: Operation[] = [
-      { op: "test", path: "/baz", value: "qux" },
-      { op: "test", path: "/foo/1", value: 2 },
-    ];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual(original);
-  });
-
-  // A.9. Testing a Value: Error
+  // RFC 6902 error cases
   test("RFC 6902 A.9: Testing a Value - Error", () => {
-    const schema = z.object({
-      baz: z.string(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { baz: "qux" };
-    const patch: Operation[] = [{ op: "test", path: "/baz", value: "bar" }];
-
-    expect(() => {
-      patcher.apply({ original, patch });
-    }).toThrow();
+    expect(() =>
+      testApply({
+        schema: z.object({ baz: z.string() }),
+        original: { baz: "qux" },
+        patch: [{ op: "test", path: "/baz", value: "bar" }],
+      })
+    ).toThrow();
   });
 
-  // A.10. Adding a Nested Member Object
-  test("RFC 6902 A.10: Adding a Nested Member Object", () => {
-    const schema = z.object({
-      foo: z.string(),
-      child: z
-        .object({
-          grandchild: z.object({}).passthrough(),
-        })
-        .optional(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { foo: "bar" };
-    const patch: Operation[] = [
-      { op: "add", path: "/child", value: { grandchild: {} } },
-    ];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({
-      foo: "bar",
-      child: {
-        grandchild: {},
-      },
-    });
-  });
-
-  // A.11. Ignoring Unrecognized Elements
-  test("RFC 6902 A.11: Ignoring Unrecognized Elements", () => {
-    const schema = z.object({
-      foo: z.string(),
-      baz: z.string().optional(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { foo: "bar" };
-    // The patch has an extra "xyz" field which should be ignored
-    const patch: Operation[] = [
-      { op: "add", path: "/baz", value: "qux", xyz: 123 } as Operation,
-    ];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({ foo: "bar", baz: "qux" });
-  });
-
-  // A.12. Adding to a Nonexistent Target
   test("RFC 6902 A.12: Adding to a Nonexistent Target - Error", () => {
-    const schema = z.object({
-      foo: z.string(),
-      baz: z
-        .object({
-          bat: z.string(),
-        })
-        .optional(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { foo: "bar" };
-    const patch: Operation[] = [{ op: "add", path: "/baz/bat", value: "qux" }];
-
-    expect(() => {
-      patcher.apply({ original, patch });
-    }).toThrow();
+    expect(() =>
+      testApply({
+        schema: z.object({
+          foo: z.string(),
+          baz: z.object({ bat: z.string() }).optional(),
+        }),
+        original: { foo: "bar" },
+        patch: [{ op: "add", path: "/baz/bat", value: "qux" }],
+      })
+    ).toThrow();
   });
 
-  // A.14. ~ Escape Ordering
-  test("RFC 6902 A.14: ~ Escape Ordering", () => {
-    const schema = z.object({}).passthrough();
-    const patcher = new JsonPatch({ schema });
-
-    const original = {
-      "/": 9,
-      "~1": 10,
-    };
-    const patch: Operation[] = [{ op: "test", path: "/~01", value: 10 }];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({
-      "/": 9,
-      "~1": 10,
-    });
-  });
-
-  // A.15. Comparing Strings and Numbers
   test("RFC 6902 A.15: Comparing Strings and Numbers - Error", () => {
-    const schema = z.object({}).passthrough();
-    const patcher = new JsonPatch({ schema });
-
-    const original = {
-      "/": 9,
-      "~1": 10,
-    };
-    const patch: Operation[] = [{ op: "test", path: "/~01", value: "10" }];
-
-    expect(() => {
-      patcher.apply({ original, patch });
-    }).toThrow();
-  });
-
-  // A.16. Adding an Array Value
-  test("RFC 6902 A.16: Adding an Array Value", () => {
-    const schema = z.object({
-      foo: z.array(z.union([z.string(), z.array(z.string())])),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const original = { foo: ["bar"] };
-    const patch: Operation[] = [
-      { op: "add", path: "/foo/-", value: ["abc", "def"] },
-    ];
-
-    const result = patcher.apply({ original, patch });
-
-    expect(result).toEqual({ foo: ["bar", ["abc", "def"]] });
+    expect(() =>
+      testApply({
+        schema: z.object({}).passthrough(),
+        original: { "/": 9, "~1": 10 },
+        patch: [{ op: "test", path: "/~01", value: "10" }],
+      })
+    ).toThrow();
   });
 
   // Additional edge cases

@@ -1,6 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
+import { z, ZodSchema } from "zod";
+import { Operation } from "fast-json-patch";
 import { JsonPatch } from "./json-patch";
+
+interface TestDiffParam<T> {
+  schema: ZodSchema<T>;
+  original: T;
+  updated: T;
+}
+
+/**
+ * Helper function to generate a diff between two objects.
+ * Returns the patch that can be asserted against.
+ */
+function testDiff<T>({
+  schema,
+  original,
+  updated,
+}: TestDiffParam<T>): Operation[] {
+  const patcher = new JsonPatch({ schema });
+  return patcher.diff({ original, updated });
+}
 
 describe("JsonPatch.diff", () => {
   test("should generate empty patch for identical objects", () => {
@@ -161,99 +181,102 @@ describe("JsonPatch.diff", () => {
   });
 
   test("should throw error when original object fails validation", () => {
-    const schema = z.object({
-      name: z.string(),
-      age: z.number(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const obj1 = { name: "John", age: "thirty" }; // Invalid: age should be number
-    const obj2 = { name: "John", age: 30 };
-
-    expect(() => {
-      patcher.diff({ original: obj1 as never, updated: obj2 });
-    }).toThrow();
+    expect(() =>
+      testDiff({
+        schema: z.object({ name: z.string(), age: z.number() }),
+        original: { name: "John", age: "thirty" } as never,
+        updated: { name: "John", age: 30 },
+      })
+    ).toThrow();
   });
 
   test("should throw error when updated object fails validation", () => {
-    const schema = z.object({
-      name: z.string(),
-      age: z.number(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const obj1 = { name: "John", age: 30 };
-    const obj2 = { name: "John", age: "thirty" }; // Invalid: age should be number
-
-    expect(() => {
-      patcher.diff({ original: obj1, updated: obj2 as never });
-    }).toThrow();
+    expect(() =>
+      testDiff({
+        schema: z.object({ name: z.string(), age: z.number() }),
+        original: { name: "John", age: 30 },
+        updated: { name: "John", age: "thirty" } as never,
+      })
+    ).toThrow();
   });
 
-  test("should handle complex nested structures", () => {
-    const schema = z.object({
-      user: z.object({
-        profile: z.object({
-          name: z.string(),
-          settings: z.object({
-            theme: z.string(),
+  // Additional diff test cases
+  const additionalDiffTests: Array<{
+    name: string;
+    schema: ZodSchema<unknown>;
+    original: unknown;
+    updated: unknown;
+    expected: Operation[];
+  }> = [
+    {
+      name: "should handle complex nested structures",
+      schema: z.object({
+        user: z.object({
+          profile: z.object({
+            name: z.string(),
+            settings: z.object({
+              theme: z.string(),
+            }),
           }),
         }),
       }),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const obj1 = {
-      user: {
-        profile: {
-          name: "John",
-          settings: { theme: "dark" },
+      original: {
+        user: {
+          profile: {
+            name: "John",
+            settings: { theme: "dark" },
+          },
         },
       },
-    };
-    const obj2 = {
-      user: {
-        profile: {
-          name: "John",
-          settings: { theme: "light" },
+      updated: {
+        user: {
+          profile: {
+            name: "John",
+            settings: { theme: "light" },
+          },
         },
       },
-    };
+      expected: [
+        { op: "replace", path: "/user/profile/settings/theme", value: "light" },
+      ],
+    },
+    {
+      name: "should handle boolean values",
+      schema: z.object({
+        active: z.boolean(),
+      }),
+      original: { active: true },
+      updated: { active: false },
+      expected: [{ op: "replace", path: "/active", value: false }],
+    },
+    {
+      name: "should handle null values",
+      schema: z.object({
+        data: z.string().nullable(),
+      }),
+      original: { data: "value" },
+      updated: { data: null },
+      expected: [{ op: "replace", path: "/data", value: null }],
+    },
+    {
+      name: "should handle date strings",
+      schema: z.object({
+        createdAt: z.string(),
+      }),
+      original: { createdAt: "2023-01-01" },
+      updated: { createdAt: "2023-01-02" },
+      expected: [{ op: "replace", path: "/createdAt", value: "2023-01-02" }],
+    },
+  ];
 
-    const patch = patcher.diff({ original: obj1, updated: obj2 });
-
-    expect(patch).toEqual([
-      { op: "replace", path: "/user/profile/settings/theme", value: "light" },
-    ]);
-  });
-
-  test("should handle boolean values", () => {
-    const schema = z.object({
-      active: z.boolean(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const obj1 = { active: true };
-    const obj2 = { active: false };
-
-    const patch = patcher.diff({ original: obj1, updated: obj2 });
-
-    expect(patch).toEqual([{ op: "replace", path: "/active", value: false }]);
-  });
-
-  test("should handle null values", () => {
-    const schema = z.object({
-      data: z.string().nullable(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const obj1 = { data: "value" };
-    const obj2 = { data: null };
-
-    const patch = patcher.diff({ original: obj1, updated: obj2 });
-
-    expect(patch).toEqual([{ op: "replace", path: "/data", value: null }]);
-  });
+  additionalDiffTests.forEach(
+    ({ name, schema, original, updated, expected }) => {
+      test(name, () => {
+        const patch = testDiff({ schema, original, updated });
+        expect(patch).toEqual(expected);
+      });
+    }
+  );
 
   test("should handle empty arrays", () => {
     const schema = z.object({
@@ -267,21 +290,5 @@ describe("JsonPatch.diff", () => {
     const patch = patcher.diff({ original: obj1, updated: obj2 });
 
     expect(patch.length).toBeGreaterThan(0);
-  });
-
-  test("should handle date strings", () => {
-    const schema = z.object({
-      createdAt: z.string(),
-    });
-    const patcher = new JsonPatch({ schema });
-
-    const obj1 = { createdAt: "2023-01-01" };
-    const obj2 = { createdAt: "2023-01-02" };
-
-    const patch = patcher.diff({ original: obj1, updated: obj2 });
-
-    expect(patch).toEqual([
-      { op: "replace", path: "/createdAt", value: "2023-01-02" },
-    ]);
   });
 });
