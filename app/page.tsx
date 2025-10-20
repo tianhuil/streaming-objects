@@ -60,12 +60,20 @@ export default function Home() {
             </div>
           </div>
 
-          <Link
-            href="/counter"
-            className="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
-          >
-            Go to Counter Stream →
-          </Link>
+          <div className="flex flex-col gap-3 mt-4">
+            <Link
+              href="/counter"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center"
+            >
+              Go to Counter Stream →
+            </Link>
+            <Link
+              href="/objects"
+              className="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-center"
+            >
+              Go to Objects Stream →
+            </Link>
+          </div>
         </div>
       </main>
     </div>
