@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { createTRPCClient, httpBatchStreamLink } from "@trpc/client";
 import type { AppRouter } from "@/server/routers/_app";
 
@@ -62,17 +62,6 @@ export function useSyncStateStream<T>({
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const trpcClient = useTrpc();
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Debounced state update to prevent excessive re-renders
-  const debouncedSetState = useCallback((value: T) => {
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-    updateTimeoutRef.current = setTimeout(() => {
-      setState(value);
-    }, 16); // ~60fps
-  }, []);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -84,7 +73,7 @@ export function useSyncStateStream<T>({
         const iterable = await queryFn(trpcClient);
         for await (const value of iterable) {
           if (abortController.signal.aborted) break;
-          debouncedSetState(value);
+          setState(value);
         }
       } catch (err) {
         if (abortController.signal.aborted) {
@@ -104,11 +93,8 @@ export function useSyncStateStream<T>({
 
     return () => {
       abortController.abort();
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
     };
-  }, [trpcClient, queryFn, debouncedSetState]);
+  }, [trpcClient, queryFn]);
 
   return { state, isStreaming, error };
 }
