@@ -1,5 +1,5 @@
 /**
- * JSON Patch implementation with Zod schema validation.
- * Provides utilities for creating, applying, and validating JSON Patches according to RFC 6902.
+ * Stateful wrapper for managing objects with JSON Patch synchronization.
+ * Provides methods to mutate state with automatic diff generation and to apply patches.
  */
-export { JsonPatch } from "./json-patch";
+export { SyncState } from "./sync-state";
