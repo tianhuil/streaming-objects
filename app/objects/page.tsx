@@ -99,12 +99,12 @@ export default function Objects() {
                   {state.map((obj, index) => (
                     <div
                       key={index}
-                      className="flex flex-col items-center justify-center p-3 border rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+                      className="flex flex-col items-center justify-center p-3 border border-gray-700 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
                     >
-                      <span className="text-xs text-gray-500 mb-1">
+                      <span className="text-xs text-gray-400 mb-1">
                         #{index}
                       </span>
-                      <span className="text-2xl font-bold text-blue-600">
+                      <span className="text-2xl font-bold text-blue-400">
                         {obj.count}
                       </span>
                     </div>
