@@ -492,17 +492,9 @@ describe("JsonPatch.apply error handling", () => {
       { op: "replace", path: "/nonexistent", value: "value" },
     ];
 
-    try {
+    expect(() => {
       patcher.apply({ original, patch });
-      expect(true).toBe(false); // Should not reach here
-    } catch (error) {
-      // Should throw PatchError, not our generic error
-      expect(error).toBeInstanceOf(Error);
-      // The actual PatchError will be the cause
-      if (error instanceof Error) {
-        expect(error.message).toContain("path");
-      }
-    }
+    }).toThrow(/path that does not exist/);
   });
 
   test("should handle objects with 'name' property without false positives", () => {
@@ -531,16 +523,9 @@ describe("JsonPatch.apply error handling", () => {
     const original = { value: 10 };
     const patch: Operation[] = [{ op: "test", path: "/value", value: 20 }];
 
-    try {
+    expect(() => {
       patcher.apply({ original, patch });
-      expect(true).toBe(false); // Should not reach here
-    } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-      if (error instanceof Error) {
-        // Should mention test failure
-        expect(error.message.toLowerCase()).toContain("test");
-      }
-    }
+    }).toThrow(/Test operation failed/);
   });
 
   test("should throw PatchError for invalid array index", () => {
@@ -554,11 +539,8 @@ describe("JsonPatch.apply error handling", () => {
       { op: "replace", path: "/items/10", value: "x" },
     ];
 
-    try {
+    expect(() => {
       patcher.apply({ original, patch });
-      expect(true).toBe(false); // Should not reach here
-    } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-    }
+    }).toThrow(/path that does not exist/);
   });
 });
