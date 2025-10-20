@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { SyncState } from "@/lib/sync-state";
 import { z } from "zod";
 import Link from "next/link";
+import { useSyncStateStream, useTrpc } from "@/lib/client/trpc";
+import { SyncState } from "@/lib/sync-state";
 import { Operation } from "fast-json-patch";
-import { useTrpc } from "@/lib/client/trpc";
+import { useCallback, useRef } from "react";
 
 const objectSchema = z.object({
   count: z.number(),
@@ -16,15 +16,10 @@ const stateSchema = z.array(objectSchema);
 type ObjectState = z.infer<typeof stateSchema>;
 
 /**
- * Objects page that demonstrates streaming SyncState with tRPC
- * Displays an array of objects with counts that update in real-time
+ * Hook that manages streaming objects with SyncState
+ * Connects to the tRPC streamingObjects endpoint and applies JSON Patch operations
  */
-export default function Objects() {
-  const [state, setState] = useState<ObjectState>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const trpcClient = useTrpc();
-
+function useStreamingObjects() {
   const syncStateRef = useRef<SyncState<ObjectState>>(
     new SyncState({
       schema: stateSchema,
@@ -32,36 +27,31 @@ export default function Objects() {
     })
   );
 
-  useEffect(() => {
-    let isCancelled = false;
-    setIsStreaming(true);
-
-    const startStreaming = async () => {
-      try {
-        const iterable = await trpcClient.streamingObjects.query();
-        for await (const operations of iterable) {
-          if (isCancelled) break;
-
-          // Apply operations to local sync state
-          syncStateRef.current.apply(operations as Operation[]);
-          setState(syncStateRef.current.state);
-        }
-      } catch (err) {
-        console.error("Streaming error:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        if (!isCancelled) {
-          setIsStreaming(false);
-        }
+  const queryFn = useCallback(async (client: ReturnType<typeof useTrpc>) => {
+    // Create an async generator that applies operations and yields states
+    async function* stateGenerator() {
+      const operationsIterable = await client.streamingObjects.query();
+      yield syncStateRef.current.state;
+      for await (const operations of operationsIterable) {
+        syncStateRef.current.apply(operations as Operation[]);
+        yield syncStateRef.current.state;
       }
-    };
+    }
 
-    startStreaming();
+    return stateGenerator();
+  }, []);
 
-    return () => {
-      isCancelled = true;
-    };
-  }, [trpcClient]);
+  return useSyncStateStream<ObjectState>({
+    queryFn,
+  });
+}
+
+/**
+ * Objects page that demonstrates streaming SyncState with tRPC
+ * Displays an array of objects with counts that update in real-time
+ */
+export default function Objects() {
+  const { state, isStreaming, error } = useStreamingObjects();
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
@@ -88,13 +78,13 @@ export default function Objects() {
               are applied to the client&apos;s SyncState.
             </p>
 
-            {isStreaming && state.length === 0 && (
+            {isStreaming && !state && (
               <p className="text-gray-500">Initializing stream...</p>
             )}
 
             {error && <p className="text-red-600">Error: {error}</p>}
 
-            {state.length > 0 && (
+            {state && state.length > 0 && (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-4 mb-2">
                   <span className="text-sm font-semibold text-gray-700">
