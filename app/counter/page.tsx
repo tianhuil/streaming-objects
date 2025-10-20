@@ -1,22 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createTRPCClient, httpBatchStreamLink } from "@trpc/client";
-import type { AppRouter } from "@/server/routers/_app";
 import Link from "next/link";
-
-/**
- * Gets the base URL for tRPC requests
- */
-function getBaseUrl() {
-  if (typeof window !== "undefined") {
-    return "";
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return `http://localhost:${process.env.PORT ?? 3000}`;
-}
+import { useTrpc } from "@/lib/client/trpc";
 
 /**
  * Counter page that demonstrates streaming with tRPC
@@ -24,22 +10,15 @@ function getBaseUrl() {
 export default function Counter() {
   const [streamingCount, setStreamingCount] = useState<number | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const trpcClient = useTrpc();
 
   useEffect(() => {
     let isCancelled = false;
     setIsStreaming(true);
 
-    const vanillaClient = createTRPCClient<AppRouter>({
-      links: [
-        httpBatchStreamLink({
-          url: `${getBaseUrl()}/api/trpc`,
-        }),
-      ],
-    });
-
     const startStreaming = async () => {
       try {
-        const iterable = await vanillaClient.infiniteCounter.query();
+        const iterable = await trpcClient.infiniteCounter.query();
         for await (const value of iterable) {
           if (isCancelled) break;
           setStreamingCount(value);
@@ -58,7 +37,7 @@ export default function Counter() {
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [trpcClient]);
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
