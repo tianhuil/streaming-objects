@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+dist
+build
+coverage
+.turbo
+*.lock
+bun.lock
+package-lock.json
+yarn.lock
+
