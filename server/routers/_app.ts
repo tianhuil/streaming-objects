@@ -30,6 +30,18 @@ export const appRouter = router({
         result: input.a + input.b,
       };
     }),
+
+  /**
+   * Infinite counter generator that yields a number every second
+   * This demonstrates async generator streaming with tRPC
+   */
+  infiniteCounter: publicProcedure.query(async function* () {
+    let count = 0;
+    while (true) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      yield count++;
+    }
+  }),
 });
 
 export type AppRouter = typeof appRouter;
