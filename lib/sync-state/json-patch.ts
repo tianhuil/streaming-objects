@@ -111,7 +111,7 @@ export class JsonPatch<T> {
    * @param param - Object containing the original object and the patch to apply.
    * @returns A new object with the patch applied.
    * @throws {z.ZodError} If the original or resulting object fails schema validation.
-   * @throws {PatchError} If the patch application fails (e.g., invalid path, test operation failure, out of bounds array index).
+   * @throws {JsonPatchError} If the patch application fails (e.g., invalid path, test operation failure, out of bounds array index).
    */
   apply({ original, patch }: ApplyParam<T>): T {
     // Validate the original object against the schema
@@ -123,7 +123,7 @@ export class JsonPatch<T> {
     // Apply the patch
     // Parameters: document, patch, validateOperation, mutateDocument, banPrototypeModifications
     // mutateDocument=true means we modify the copy in place
-    // Note: applyPatch will throw a PatchError exception if any operation fails
+    // Note: applyPatch will throw a JsonPatchError exception if any operation fails
     // (e.g., invalid path, test operation failure, etc.)
     const result = applyPatch(copy as object, patch, true, true, true);
 
