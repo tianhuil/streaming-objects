@@ -1,6 +1,6 @@
 # Streaming Objects
 
-![CI](https://github.com/OWNER/streaming-objects/actions/workflows/ci.yaml/badge.svg)
+![CI](https://github.com/tianhuil/streaming-objects/actions/workflows/ci.yaml/badge.svg)
 
 A demonstration of **real-time state synchronization** using tRPC streaming with JSON Patch operations. This project showcases an efficient pattern for streaming complex state changes from server to client by transmitting only the deltas rather than the full state.
 
