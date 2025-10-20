@@ -61,12 +61,6 @@ export const appRouter = router({
       initialState: [],
     });
 
-    // Yield initial state as first operation
-    yield {
-      operations: [],
-      state: syncState.state,
-    };
-
     while (true) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -86,10 +80,7 @@ export const appRouter = router({
         }
       });
 
-      yield {
-        operations,
-        state: syncState.state,
-      };
+      yield operations;
     }
   }),
 });

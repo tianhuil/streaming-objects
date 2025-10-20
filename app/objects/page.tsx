@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createTRPCClient, httpBatchStreamLink } from "@trpc/client";
 import type { AppRouter } from "@/server/routers/_app";
 import { SyncState } from "@/lib/sync-state";
@@ -38,6 +38,13 @@ export default function Objects() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const syncStateRef = useRef<SyncState<ObjectState>>(
+    new SyncState({
+      schema: stateSchema,
+      initialState: [],
+    })
+  );
+
   useEffect(() => {
     let isCancelled = false;
     setIsStreaming(true);
@@ -50,25 +57,15 @@ export default function Objects() {
       ],
     });
 
-    const syncState = new SyncState({
-      schema: stateSchema,
-      initialState: [],
-    });
-
     const startStreaming = async () => {
       try {
         const iterable = await vanillaClient.streamingObjects.query();
-        for await (const value of iterable) {
+        for await (const operations of iterable) {
           if (isCancelled) break;
 
-          if (value.operations.length === 0) {
-            // Initial state
-            setState(value.state);
-          } else {
-            // Apply operations to local sync state
-            syncState.apply(value.operations as Operation[]);
-            setState(syncState.state);
-          }
+          // Apply operations to local sync state
+          syncStateRef.current.apply(operations as Operation[]);
+          setState(syncStateRef.current.state);
         }
       } catch (err) {
         console.error("Streaming error:", err);
