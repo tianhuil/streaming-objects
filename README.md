@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/tianhuil/streaming-objects/actions/workflows/ci.yaml/badge.svg)
 
-A demonstration of **real-time state synchronization** using tRPC streaming diffs using the [JSON Patch protocol](https://jsonpatch.com/). This project showcases an efficient pattern for streaming complex state changes from server to client by transmitting only the deltas rather than the full state.
+A demonstration of **real-time state synchronization** using tRPC streaming diffs using the [JSON Patch protocol](https://jsonpatch.com/). This project showcases an efficient pattern for streaming complex state changes from server to client by transmitting only the deltas rather than the full state. See the [live demo](https://streaming-objects.vercel.app/).
 
 ## Overview
 
