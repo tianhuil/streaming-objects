@@ -10,16 +10,17 @@ to client by transmitting only the deltas rather than the full state. See the
 
 ## Motivation
 
-AI Chat applications need to stream many objects from the server and be able to
+AI Chat applications need to stream many objects from the server to client with
+unique requirements:
 
 - 🎨 **Handle diverse object types** (e.g. messages, thinking, generated images,
   code artifacts)
 - 🔄 **Mutate individual objects during a session** (e.g. moving from loading,
-  completed, error state).
+  completed, error state)
 - 📡 **Stream updates efficiently** in a band-width constrained environment
 
 We leverage [fast-json-patch](https://www.npmjs.com/package/fast-json-patch) to
-efficiently send diffs to mirror CRUD operations between server and client while
+efficiently send diff changes as CRUD operations between server and client while
 leveraging [zod](https://zod.dev/) and [trpc](https://trpc.io/) to provide both
 compile-time and run-time type-safety.
 
