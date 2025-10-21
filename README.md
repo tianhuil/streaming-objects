@@ -2,23 +2,50 @@
 
 ![CI](https://github.com/tianhuil/streaming-objects/actions/workflows/ci.yaml/badge.svg)
 
-A demonstration of **real-time state synchronization** using tRPC streaming diffs using the [JSON Patch protocol](https://jsonpatch.com/). This project showcases an efficient pattern for streaming complex state changes from server to client by transmitting only the deltas rather than the full state. See the [live demo](https://streaming-objects.vercel.app/).
+A demonstration of **real-time state synchronization** using tRPC streaming
+diffs using the [JSON Patch protocol](https://jsonpatch.com/). This project
+showcases an efficient pattern for streaming complex state changes from server
+to client by transmitting only the deltas rather than the full state. See the
+[live demo](https://streaming-objects.vercel.app/).
+
+## Motivation
+
+AI Chat applications need to stream many objects from the server and be able to
+
+- 🎨 **Handle diverse object types** (e.g. messages, thinking, generated images,
+  code artifacts)
+- 🔄 **Mutate individual objects during a session** (e.g. moving from loading,
+  completed, error state).
+- 📡 **Stream updates efficiently** in a band-width constrained environment
+
+We leverage [fast-json-patch](https://www.npmjs.com/package/fast-json-patch) to
+efficiently send diffs to mirror CRUD operations between server and client while
+leveraging [zod](https://zod.dev/) and [trpc](https://trpc.io/) to provide both
+compile-time and run-time type-safety.
 
 ## Overview
 
-This project demonstrates a powerful pattern for realtime state synchronization that is
+This project demonstrates a powerful pattern for realtime state synchronization
+that is
 
 - ⚡ **bandwidth-efficient** (only deltas are transmitted)
 - 🛡️ **type-safe** (end-to-end TypeScript), and
-- 📈 **scalable** (streaming reduces memory overhead compared to buffering full responses).
+- 📈 **scalable** (streaming reduces memory overhead compared to buffering full
+  responses).
 
 This architecture is as follows:
 
-1. **Server-side state management**: The server maintains authoritative state using `SyncState`, a stateful wrapper that generates diff operations when the state mutates.
+1. **Server-side state management**: The server maintains authoritative state
+   using `SyncState`, a stateful wrapper that generates diff operations when the
+   state mutates.
 
-2. **Streaming with tRPC**: Using tRPC's async generator support and `httpBatchStreamLink`, the server streams JSON Patch operations to the client in real-time.
+2. **Streaming with tRPC**: Using tRPC's async generator support and
+   `httpBatchStreamLink`, the server streams JSON Patch operations to the client
+   in real-time.
 
-3. **Client-side state application**: The client maintains its own `SyncState` instance and applies incoming JSON Patch operations, keeping its local state in sync with the server.
+3. **Client-side state application**: The client maintains its own `SyncState`
+   instance and applies incoming JSON Patch operations, keeping its local state
+   in sync with the server.
 
 ## Key Components
 
@@ -97,30 +124,8 @@ Run the development server:
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and navigate to the examples:
+Open [http://localhost:3000](http://localhost:3000) and navigate to the
+examples:
 
 - `/counter` - Simple streaming counter
 - `/objects` - Complex state synchronization with JSON Patch
-
-## Architecture Benefits
-
-- **Bandwidth Efficient**: Only state deltas are transmitted, not full snapshots
-- **Type Safe**: End-to-end type safety from server to client via tRPC
-- **Scalable**: Streaming reduces memory overhead vs buffering
-- **Flexible**: JSON Patch operations work with any JSON-serializable state
-- **Validated**: Zod schemas ensure state integrity on both ends
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
