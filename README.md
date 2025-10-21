@@ -97,6 +97,37 @@ streamingObjects: publicProcedure.query(async function* () {
 
 **Client** (`lib/client/trpc.ts`):
 
+```typescript
+// Create tRPC client with streaming support
+const client = createTRPCClient<AppRouter>({
+  links: [
+    httpBatchStreamLink({
+      url: `${getBaseUrl()}/api/trpc`,
+    }),
+  ],
+});
+
+// Consume the stream in a React component
+const syncStateRef = useRef(new SyncState({ schema, initialState: [] }));
+
+const queryFn = useCallback(async (client) => {
+  async function* stateGenerator() {
+    const operationsIterable = await client.streamingObjects.query();
+    yield syncStateRef.current.state; // Yield initial state
+
+    for await (const operations of operationsIterable) {
+      syncStateRef.current.apply(operations); // Apply JSON Patch
+      yield syncStateRef.current.state; // Yield updated state
+    }
+  }
+  return stateGenerator();
+}, []);
+
+const { state, isStreaming, error } = useSyncStateStream({ queryFn });
+```
+
+The client:
+
 - Uses `httpBatchStreamLink` to enable streaming support
 - Provides `useSyncStateStream` hook for consuming async iterables in React
 - Manages connection lifecycle, error handling, and cleanup
