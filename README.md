@@ -142,6 +142,25 @@ The `/objects` page demonstrates the full pattern:
 - Client applies operations to its local `SyncState`
 - UI reactively updates to show the synchronized state
 
+### Example: Streaming OpenAI output
+
+When streaming text (like an AI model's output), prefer pushing chunks to an array rather than appending to a string. The Json-Patch standard ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902#section-4.1)) does not allow adding to strings, only replacing them, which cause inefficient diffs to be generated.
+
+```typescript
+const syncState = new SyncState({
+  schema: z.object({
+    assistantResponse: z.string().array(), // Use an array here, not a string
+  }),
+  initialState: { assistantResponse: [] as string[] }
+})
+
+for await (const chunk of await openai.chat.completions.create({ stream: true, /* ... */ })) {
+  const chunkContent = chunk.choices[0].delta.content
+  const operations = syncState.mutateAndDiff(state => ({ assistantResponse: [...state.assistantResponse, chunkContent] }))
+  yield operations
+}
+```
+
 ## Getting Started
 
 Install dependencies:
