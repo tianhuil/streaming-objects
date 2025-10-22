@@ -5,7 +5,7 @@ import { JsonPatch } from "./json-patch";
 /**
  * Parameters for constructing a SyncState instance.
  */
-interface SyncStateParam<T> {
+interface SyncStateParam<T extends object | object[]> {
   schema: ZodType<T>;
   initialState: T;
 }
@@ -14,9 +14,9 @@ interface SyncStateParam<T> {
  * A stateful wrapper around JsonPatch that manages an internal state object.
  * Provides methods to mutate state with automatic diff generation and to apply patches.
  *
- * @template T - The type of the state object.
+ * @template T - The type of the state object. Must be an object or array of objects.
  */
-export class SyncState<T> {
+export class SyncState<T extends object | object[]> {
   private readonly jsonPatch: JsonPatch<T>;
   private _state: T;
 

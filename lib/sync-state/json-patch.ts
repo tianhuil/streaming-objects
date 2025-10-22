@@ -47,14 +47,14 @@ type ZOperation = z.infer<typeof ZOperation>;
 /**
  * Parameters for constructing a JsonPatch instance.
  */
-interface JsonPatchParam<T> {
+interface JsonPatchParam<T extends object | object[]> {
   schema: ZodType<T>;
 }
 
 /**
  * Parameters for the diff method.
  */
-interface DiffParam<T> {
+interface DiffParam<T extends object | object[]> {
   original: T;
   updated: T;
 }
@@ -62,7 +62,7 @@ interface DiffParam<T> {
 /**
  * Parameters for the apply method.
  */
-interface ApplyParam<T> {
+interface ApplyParam<T extends object | object[]> {
   original: T;
   patch: Operation[];
 }
@@ -71,9 +71,9 @@ interface ApplyParam<T> {
  * A class for working with JSON Patch operations (RFC 6902) with Zod schema validation.
  * This class provides methods to diff objects, apply patches, and validate patch operations.
  *
- * @template T - The type of objects this patch handler works with.
+ * @template T - The type of objects this patch handler works with. Must be an object or array of objects.
  */
-export class JsonPatch<T> {
+export class JsonPatch<T extends object | object[]> {
   private readonly schema: ZodType<T>;
 
   /**
@@ -100,7 +100,7 @@ export class JsonPatch<T> {
 
     // Generate and return the patch
     // Note: compare() never throws errors, it simply generates a diff
-    return compare(original as object, updated as object);
+    return compare(original, updated);
   }
 
   /**
@@ -125,7 +125,7 @@ export class JsonPatch<T> {
     // mutateDocument=true means we modify the copy in place
     // Note: applyPatch will throw a JsonPatchError exception if any operation fails
     // (e.g., invalid path, test operation failure, etc.)
-    const result = applyPatch(copy as object, patch, true, true, true);
+    const result = applyPatch(copy, patch, true, true, true);
 
     // Get the modified document from the result
     const { newDocument } = result;

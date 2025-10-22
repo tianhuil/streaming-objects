@@ -3,7 +3,7 @@ import { z, ZodSchema } from "zod";
 import { Operation } from "fast-json-patch";
 import { JsonPatch } from "./json-patch";
 
-interface TestApplyParam<T> {
+interface TestApplyParam<T extends object | object[]> {
   schema: ZodSchema<T>;
   original: T;
   patch: Operation[];
@@ -13,7 +13,28 @@ interface TestApplyParam<T> {
  * Helper function to apply a patch to an object.
  * Returns the result that can be asserted against.
  */
-function testApply<T>({ schema, original, patch }: TestApplyParam<T>): T {
+function testApply<T extends object | object[]>({
+  schema,
+  original,
+  patch,
+}: TestApplyParam<T>): T {
+  const patcher = new JsonPatch({ schema });
+  return patcher.apply({ original, patch });
+}
+
+/**
+ * Helper function to test error cases with invalid data.
+ * Accepts unknown types to avoid type casting.
+ */
+function testApplyWithInvalidData({
+  schema,
+  original,
+  patch,
+}: {
+  schema: ZodSchema<object | object[]>;
+  original: object | object[];
+  patch: Operation[];
+}): object | object[] {
   const patcher = new JsonPatch({ schema });
   return patcher.apply({ original, patch });
 }
@@ -85,13 +106,12 @@ describe("JsonPatch.apply", () => {
       name: z.string(),
       age: z.number(),
     });
-    const patcher = new JsonPatch({ schema });
 
     const original = { name: "John", age: "thirty" }; // Invalid
     const patch: Operation[] = [{ op: "replace", path: "/age", value: 31 }];
 
     expect(() => {
-      patcher.apply({ original: original as never, patch });
+      testApplyWithInvalidData({ schema, original, patch });
     }).toThrow();
   });
 
@@ -204,10 +224,10 @@ describe("JsonPatch.apply", () => {
   // https://datatracker.ietf.org/doc/html/rfc6902#appendix-A
   const rfcTestCases: Array<{
     name: string;
-    schema: ZodSchema<unknown>;
-    original: unknown;
+    schema: ZodSchema<object | object[]>;
+    original: object | object[];
     patch: Operation[];
-    expected: unknown;
+    expected: object | object[];
   }> = [
     {
       name: "A.1: Adding an Object Member",

@@ -3,7 +3,7 @@ import { z, ZodSchema } from "zod";
 import { Operation } from "fast-json-patch";
 import { JsonPatch } from "./json-patch";
 
-interface TestDiffParam<T> {
+interface TestDiffParam<T extends object | object[]> {
   schema: ZodSchema<T>;
   original: T;
   updated: T;
@@ -13,13 +13,33 @@ interface TestDiffParam<T> {
  * Helper function to generate a diff between two objects.
  * Returns the patch that can be asserted against.
  */
-function testDiff<T>({
+function testDiff<T extends object | object[]>({
   schema,
   original,
   updated,
 }: TestDiffParam<T>): Operation[] {
   const patcher = new JsonPatch({ schema });
   return patcher.diff({ original, updated });
+}
+
+/**
+ * Helper function to test error cases with invalid data.
+ * Accepts unknown types to avoid type casting.
+ */
+function testDiffWithInvalidData({
+  schema,
+  original,
+  updated,
+}: {
+  schema: ZodSchema<object | object[]>;
+  original: object | object[];
+  updated: object | object[];
+}): Operation[] {
+  const patcher = new JsonPatch({ schema });
+  return patcher.diff({
+    original: original,
+    updated: updated,
+  });
 }
 
 describe("JsonPatch.diff", () => {
@@ -182,9 +202,9 @@ describe("JsonPatch.diff", () => {
 
   test("should throw error when original object fails validation", () => {
     expect(() =>
-      testDiff({
+      testDiffWithInvalidData({
         schema: z.object({ name: z.string(), age: z.number() }),
-        original: { name: "John", age: "thirty" } as never,
+        original: { name: "John", age: "thirty" },
         updated: { name: "John", age: 30 },
       })
     ).toThrow();
@@ -192,10 +212,10 @@ describe("JsonPatch.diff", () => {
 
   test("should throw error when updated object fails validation", () => {
     expect(() =>
-      testDiff({
+      testDiffWithInvalidData({
         schema: z.object({ name: z.string(), age: z.number() }),
         original: { name: "John", age: 30 },
-        updated: { name: "John", age: "thirty" } as never,
+        updated: { name: "John", age: "thirty" },
       })
     ).toThrow();
   });
@@ -203,9 +223,9 @@ describe("JsonPatch.diff", () => {
   // Additional diff test cases
   const additionalDiffTests: Array<{
     name: string;
-    schema: ZodSchema<unknown>;
-    original: unknown;
-    updated: unknown;
+    schema: ZodSchema<object | object[]>;
+    original: object | object[];
+    updated: object | object[];
     expected: Operation[];
   }> = [
     {
