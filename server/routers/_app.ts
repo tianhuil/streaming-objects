@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
 import { SyncState } from "@/lib/sync-state";
+import { Operation } from "fast-json-patch";
 
 /**
  * Main application router that combines all sub-routers
@@ -49,7 +50,9 @@ export const appRouter = router({
    * State is an array of objects with count properties
    * Each iteration either increments an existing object or adds a new one
    */
-  streamingObjects: publicProcedure.query(async function* () {
+  streamingObjects: publicProcedure.query(async function* (): AsyncGenerator<
+    Operation[]
+  > {
     const objectSchema = z.object({
       count: z.number(),
     });

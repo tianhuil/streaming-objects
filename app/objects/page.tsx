@@ -33,6 +33,9 @@ function useStreamingObjects() {
       const operationsIterable = await client.streamingObjects.query();
       yield syncStateRef.current.state;
       for await (const operations of operationsIterable) {
+        // Type assertion needed: tRPC's serialization creates a type signature
+        // that differs slightly from fast-json-patch's Operation type (e.g., value?: any
+        // vs required value). The runtime data is correct, just the types don't align perfectly.
         syncStateRef.current.apply(operations as Operation[]);
         yield syncStateRef.current.state;
       }
