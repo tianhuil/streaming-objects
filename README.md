@@ -142,9 +142,9 @@ The `/objects` page demonstrates the full pattern:
 - Client applies operations to its local `SyncState`
 - UI reactively updates to show the synchronized state
 
-### Example: Streaming OpenAI output
+### ⚠️ Streaming string output
 
-⚠️ When streaming text (like an AI model's output), prefer pushing chunks to an
+When streaming text (like an AI model's output), prefer pushing chunks to an
 array rather than appending to a string. The Json-Patch standard
 ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902#section-4.1)) does not
 allow adding to strings, only replacing them, which cause inefficient diffs to
