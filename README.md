@@ -144,8 +144,6 @@ The `/objects` page demonstrates the full pattern:
 
 ### Example: Streaming OpenAI output
 
-When streaming text (like an AI model's output), prefer pushing chunks to an array rather than appending to a string. The Json-Patch standard ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902#section-4.1)) does not allow adding to strings, only replacing them, which cause inefficient diffs to be generated.
-
 ```typescript
 const syncState = new SyncState({
   schema: z.object({
@@ -160,6 +158,34 @@ for await (const chunk of await openai.chat.completions.create({ stream: true, /
   yield operations
 }
 ```
+
+⚠️ When streaming text (like an AI model's output), prefer pushing chunks to an array rather than appending to a string. The Json-Patch standard ([RFC 6902](https://datatracker.ietf.org/doc/html/rfc6902#section-4.1)) does not allow adding to strings, only replacing them, which cause inefficient diffs to be generated.
+
+
+Diffs when appending to a string:
+```jsonl
+[[[{"op":"replace","path":"/assistantResponse","value":"I"}]]]
+[[[{"op":"replace","path":"/assistantResponse","value":"I am"}]]]
+[[[{"op":"replace","path":"/assistantResponse","value":"I am a"}]]]
+[[[{"op":"replace","path":"/assistantResponse","value":"I am a help"}]]]
+[[[{"op":"replace","path":"/assistantResponse","value":"I am a helpful"}]]]
+[[[{"op":"replace","path":"/assistantResponse","value":"I am a helpful as"}]]]
+[[[{"op":"replace","path":"/assistantResponse","value":"I am a helpful assist"}]]]
+[[[{"op":"replace","path":"/assistantResponse","value":"I am a helpful assistant"}]]] 
+```
+
+Diffs when pushing to an array:
+```jsonl
+[[[{"op":"add","path":"/assistantResponse/0","value":"I "}]]]
+[[[{"op":"add","path":"/assistantResponse/1","value":"am "}]]]
+[[[{"op":"add","path":"/assistantResponse/2","value":"a "}]]]
+[[[{"op":"add","path":"/assistantResponse/3","value":"help"}]]]
+[[[{"op":"add","path":"/assistantResponse/4","value":"ful"}]]]
+[[[{"op":"add","path":"/assistantResponse/5","value":" as"}]]]
+[[[{"op":"add","path":"/assistantResponse/6","value":"sist"}]]]
+[[[{"op":"add","path":"/assistantResponse/7","value":"ant"}]]]
+```
+
 
 ## Getting Started
 
