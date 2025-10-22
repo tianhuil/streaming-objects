@@ -11,10 +11,11 @@
 - Prefer `const` to `let` and mutation. You can often change `let` to `const` by
   wrapping the complex logic in a separate function call (e.g.
   `const val = getVal()`).
-- Explicitly type where practicable. Look at the libraries and import and use
-  those types; do not make up types.
-- Always avoid using type `any`. Try to avoid `unknown` if a known type can be
-  gleaned from a library.
+- Explicitly annotate types where practicable. Look at the libraries and import
+  and use those types; do not make up types.
+- Always avoid using `as any`. Try to avoid `as unknown` if a known type can be
+  used (research library types as needed). Avoid typecasting in general by
+  properly annotating function params and return values upstream.
 - Add docstring to every class and function.
 - Any function or class with more than one argument should take a single object
   with named parameters. Function `fooBar` takes type `FooBarParam`, which
